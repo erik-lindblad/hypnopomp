@@ -1,6 +1,9 @@
 # Corpus exports
 dreaming-corpus-*.json
 
+# Generated at build time by the Render static site (copied from data/corpus.json)
+public/corpus.json
+
 # OS / editor cruft
 .DS_Store
 *.swp

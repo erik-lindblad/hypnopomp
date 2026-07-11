@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Dreaming</title>
+<meta name="description" content="What the internet dreamt — an endless, anonymous drift of dreams collected from the open social web.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #070810;
+    --ink2: #0c0e1c;
+    --mist: #8b93ad;
+    --moon: #d8dcea;
+    --ember: #b7a98a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: radial-gradient(120% 80% at 50% 8%, #12142a 0%, var(--ink2) 42%, var(--ink) 100%);
+    color: var(--moon);
+    font-family: "Cormorant Garamond", Georgia, serif;
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; pointer-events: none;
+    background: radial-gradient(120% 90% at 50% 120%, rgba(183,169,138,0.05), transparent 55%);
+  }
+
+  #stream { position: fixed; inset: 0; overflow: hidden; }
+
+  .frag {
+    position: absolute;
+    top: 0; left: 50%;
+    width: min(760px, 82vw);
+    text-align: center;
+    font-size: clamp(21px, 2.9vw, 38px);
+    font-weight: 400; line-height: 1.45;
+    color: var(--moon);
+    text-wrap: balance;
+    text-shadow: 0 0 34px rgba(120,130,170,0.28);
+    /* start off the bottom, invisible; the animation drives the rest */
+    transform: translate(-50%, 100vh);
+    opacity: 0;
+    will-change: transform, opacity;
+  }
+  .frag .lead { color: var(--ember); font-style: italic; }
+
+  /* one animation drives BOTH the upward drift and the fade — kept in sync.
+     Travel 100vh → -55vh keeps a fragment on-screen for most of its life. */
+  @keyframes rise {
+    0%   { transform: translate(-50%, 100vh); opacity: 0; }
+    15%  { opacity: 0.92; }
+    82%  { opacity: 0.92; }
+    100% { transform: translate(-50%, -55vh); opacity: 0; }
+  }
+
+  header, footer {
+    position: fixed; left: 0; right: 0; z-index: 5;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 22px 30px; pointer-events: none;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10px; letter-spacing: 0.26em; text-transform: uppercase;
+    color: #4a4f63;
+  }
+  header { top: 0; } footer { bottom: 0; }
+  header .mark { color: #6a7089; }
+  #count { color: var(--mist); }
+
+  #hush {
+    position: fixed; inset: 0; display: none;
+    align-items: center; justify-content: center; text-align: center; padding: 10vw;
+    font-size: clamp(22px, 3vw, 40px); color: var(--mist); font-style: italic;
+  }
+  #hush.on { display: flex; }
+
+  /* respect reduced motion: hold near center and simply crossfade */
+  @media (prefers-reduced-motion: reduce) {
+    .frag { transform: translate(-50%, 42vh); }
+    @keyframes rise {
+      0%   { transform: translate(-50%, 42vh); opacity: 0; }
+      50%  { transform: translate(-50%, 42vh); opacity: 0.92; }
+      100% { transform: translate(-50%, 42vh); opacity: 0; }
+    }
+  }
+</style>
+</head>
+<body>
+<div id="stream" role="log" aria-label="A stream of collected dreams"></div>
+
+<header>
+  <span class="mark">The Dreaming</span>
+  <span>what the internet dreamt</span>
+</header>
+<footer>
+  <span><span id="count">—</span> dreams collected</span>
+  <span>anonymous · unattributed</span>
+</footer>
+
+<div id="hush">the dreaming is still listening…</div>
+
+<script>
+"use strict";
+
+const stream = document.getElementById("stream");
+const hush = document.getElementById("hush");
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// Pacing (ms): how often a new dream surfaces, and how long it drifts across.
+const SPAWN_MS = REDUCED ? 8000 : 4600;
+const LIFE_MS = REDUCED ? 8000 : 21000;
+
+// Emphasize just the short opening phrase, up to and including the first
+// "dream/dreamt/nightmare (that)" — never the whole sentence.
+const LEAD = /^(.*?\b(?:dreamt|dreamed|nightmares?|dreams?)\b(?:\s+that)?)/i;
+
+function clean(t) { return t.replace(/\s+/g, " ").trim(); }
+
+function render(text) {
+  const el = document.createElement("div");
+  el.className = "frag";
+  const m = text.match(LEAD);
+  if (m && m[1].length <= 42) {
+    const lead = document.createElement("span");
+    lead.className = "lead";
+    lead.textContent = m[1];
+    el.appendChild(lead);
+    el.appendChild(document.createTextNode(text.slice(m[1].length)));
+  } else {
+    el.textContent = text;
+  }
+  return el;
+}
+
+let dreams = [];
+let bag = [];          // shuffled queue, refilled when drained
+let spawnTimer = null;
+
+function reshuffle() {
+  bag = dreams.slice();
+  for (let i = bag.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [bag[i], bag[j]] = [bag[j], bag[i]];
+  }
+}
+function draw() {
+  if (!bag.length) reshuffle();
+  return bag.pop();
+}
+
+function spawn() {
+  if (!dreams.length) return;
+  const el = render(draw());
+  const life = LIFE_MS * (0.88 + Math.random() * 0.3);   // gentle variety
+  el.style.animation = `rise ${life}ms linear forwards`;
+  el.addEventListener("animationend", () => el.remove());
+  stream.appendChild(el);
+}
+
+function start() {
+  document.getElementById("count").textContent = dreams.length.toLocaleString();
+  if (!dreams.length) { hush.classList.add("on"); return; }
+  reshuffle();
+  spawn();
+  setTimeout(spawn, SPAWN_MS * 0.5);   // seed a second so the field isn't bare
+  spawnTimer = setInterval(spawn, SPAWN_MS);
+}
+
+fetch("corpus.json", { cache: "no-store" })
+  .then(r => r.ok ? r.json() : Promise.reject(r.status))
+  .then(data => {
+    dreams = (Array.isArray(data) ? data : [])
+      .map(d => clean(d && d.text ? d.text : ""))
+      .filter(t => t.length > 0);
+    start();
+  })
+  .catch(() => { hush.classList.add("on"); });
+</script>
+</body>
+</html>

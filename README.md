@@ -20,6 +20,7 @@ is complete.
 | `collector.js`                | The headless collector: same firehose + filters, writes the corpus to a file. |
 | `package.json`                | Node manifest for the collector (its one dependency is `ws`).                  |
 | `.github/workflows/collect.yml` | Scheduled job that runs the collector and commits the corpus (Stage 1 beta). |
+| `public/index.html`           | The public display: a twistori-style drift of the collected corpus. Deployed as a static site. |
 
 In the browser, load order matters — `filters.js`, `ambience.js`, `stream.js`
 are classic (non-module) scripts sharing one global scope: `filters.js` defines
@@ -101,6 +102,32 @@ runs forever, pointing `OUTPUT` at a persistent disk (or adapt the flush to push
 to a store). No code changes — only the deploy wrapper differs. This is a paid,
 always-on upgrade; the GitHub Actions path above is the free beta.
 
+## The public display
+
+`public/index.html` renders the collected corpus as a twistori-inspired drift —
+anonymous dream fragments rising slowly through the dark, cycling endlessly
+through a shuffled `corpus.json`. It's a self-contained static page: it fetches
+`corpus.json` (served alongside it) and needs no backend.
+
+**Deploy as a Render Static Site** (free, always-on, CDN-served — unlike the
+paid always-on worker above):
+
+1. Render → **New → Static Site**, connect this **private** repo.
+2. **Build Command:** `cp data/corpus.json public/corpus.json`
+   (this bakes the latest corpus into the published site).
+3. **Publish Directory:** `public`
+4. Leave **Auto-Deploy** on. Each nightly `[skip ci] corpus: N dreams` commit
+   then redeploys the site with fresh dreams. (`[skip ci]` is a GitHub-Actions
+   marker; Render uses its own `[skip render]`, so these commits still deploy —
+   confirm on the first nightly run.)
+
+Locally, mirror the build with `cp data/corpus.json public/corpus.json` and serve
+the `public/` folder. `public/corpus.json` is git-ignored — it's generated, not
+source.
+
+Per the data-contract amendment, this displays raw dream text but only
+anonymously (no handle, DID, or link is ever collected).
+
 ## The three-stage plan
 
 ### Stage 1 — The Instrument  *(implemented)*
@@ -136,7 +163,22 @@ canvas — never the same twice, always derived from what was actually dreamt.
 The stages are separated by a strict, one-directional flow of data. This is a
 privacy guarantee, not just an architecture note:
 
-- **Stage 1 output = raw dreams** — local only, never published.
+- **Stage 1 output = raw dreams** — local only, never published *except* via the
+  anonymized public display (see amendment below).
 - **Stage 2 output = distillations** — the *only* data that ever leaves the machine.
 - **Stage 3 input = distillations only** — the artwork never touches a raw dream,
   so it cannot leak one.
+
+### Amendment — the anonymized public display
+
+The original contract said raw dreams are *never* published. The `public/`
+display is a deliberate, scoped exception: it shows raw dream **text** publicly,
+but only under strict anonymity. This is considered acceptable because:
+
+- The source posts are **already public** on the open social web.
+- The collector stores **only `{ text, at }`** — no author handle, no DID, no
+  post link. There is no stored path back to the person who dreamt it, so the
+  display is anonymous by construction, not by promise.
+
+The rest of the contract stands: nothing that could **re-attribute** a dream
+(handle, DID, URL) is ever collected, stored, or shown.
