@@ -1,9 +1,9 @@
 name: collect-dreams
 
-# Stage 1 (beta) deployment: a scheduled GitHub Actions job runs the headless
-# collector for a bounded window, then commits the accumulated corpus back to
-# this (PRIVATE) repo. Keep the repo private so raw dreams are never published,
-# per the data contract in the README.
+# Stage 1 deployment: a scheduled GitHub Actions job runs the headless collector
+# for a short bounded window, then commits the accumulated corpus back to this
+# PRIVATE repo. The window is sized to fit GitHub's free 2,000 Actions-min/month
+# so nightly collection stays free on a private repo — see the README budget math.
 
 on:
   workflow_dispatch:
@@ -12,15 +12,17 @@ on:
         description: "How long to listen, in ms (manual runs)"
         default: "300000"   # 5 minutes — good for a quick test
   schedule:
-    # 11:00 UTC daily → the collector runs ~5.5h, to ~16:30 UTC. This rides the
-    # US morning "just woke up" dream-posting wave from coast to coast:
-    #   Eastern  7:00am–12:30pm  (full peak)
-    #   Central  6:00am–11:30am  (full morning)
-    #   Mountain 5:00am–10:30am  (full morning)
-    #   Pacific  4:00am– 9:30am  (early peak; clips the 9:30–11am tail)
-    # Centered on Eastern+Central (~¾ of US population). Cron is always UTC,
-    # so this drifts one hour earlier in local terms after US DST ends in Nov.
-    - cron: "0 11 * * *"
+    # 12:00 UTC daily → the collector listens ~50 min (a short window sized to fit
+    # the free 2,000 Actions-min/month budget; see the README). 12:00 UTC is the
+    # densest single hour of US dream-posting — it overlaps the post-wake window
+    # of the two largest zones:
+    #   Eastern  8:00–8:50am
+    #   Central  7:00–7:50am
+    # — together ~¾ of the US. Being short, it samples this peak hour rather than
+    # the whole coast-to-coast morning the old 5.5h window swept. (For nightly
+    # full-length collection, going public unlocks unlimited minutes — see README.)
+    # Cron is always UTC, so this drifts an hour earlier in local terms after Nov.
+    - cron: "0 12 * * *"
 
 # Never run two collectors at once (they'd fight over corpus.json on commit).
 concurrency:
@@ -33,8 +35,8 @@ permissions:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    # Hosted-runner hard cap is 6h; stay under it and leave room to commit.
-    timeout-minutes: 355
+    # ~50-min collect + setup/commit; 60 is a safe ceiling.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -47,8 +49,8 @@ jobs:
       - name: Collect
         env:
           OUTPUT: data/corpus.json
-          # Manual runs use the input; scheduled runs listen ~5.5h (19,800,000 ms).
-          DURATION_MS: ${{ github.event.inputs.duration_ms || '19800000' }}
+          # Manual runs use the input; scheduled runs listen ~50 min (3,000,000 ms).
+          DURATION_MS: ${{ github.event.inputs.duration_ms || '3000000' }}
         run: node collector.js
 
       - name: Commit corpus

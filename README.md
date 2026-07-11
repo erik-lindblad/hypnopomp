@@ -73,33 +73,35 @@ so collection survives across separate runs.
 
 ### Now — GitHub Actions (Stage 1 beta)
 
-`.github/workflows/collect.yml` runs the collector on a schedule (bounded ~5.5h
-windows, the most a hosted runner allows) and commits `data/corpus.json` back to
-the repo.
+`.github/workflows/collect.yml` runs the collector on a schedule, then commits
+`data/corpus.json` back to the repo.
 
-**This repo is public — deliberately.** A private repo gets only ~2,000 Actions
-minutes/month, and a nightly 5.5h run burns that in ~6 nights. A **public** repo
-gets *unlimited* Actions minutes, so collection can run nightly, year-round, for
-free. This is consistent with the data-contract amendment below: the corpus is
-anonymized (only `{ text, at }` — no handle, DID, or link), so a public repo
-exposes nothing that isn't already public and unattributable.
+**This repo is private, and the window is kept short to stay free.** A private
+repo gets ~2,000 Actions minutes/month. A full 5.5h nightly run would burn that
+in ~6 nights, so the schedule instead listens **~50 min/night** during the
+densest hour of US dream-posting (12:00 UTC ≈ 8am ET / 7am CT). That's
+~52 min/night × 31 ≈ 1,600 min/month — nightly, year-round, comfortably free.
+
+The tradeoff: a short window **samples the peak hour** rather than sweeping the
+whole coast-to-coast morning. If you later want nightly *full-length* collection,
+making the repo **public** unlocks unlimited Actions minutes — acceptable because
+the corpus is anonymized (only `{ text, at }`, no handle/DID/link), consistent
+with the amendment below. (Before going public, confirm no secrets are in the
+tree or history — this project has none; it uses only the public Bluesky
+jetstream, no auth.)
 
 Setup:
 
-1. Create a **public** GitHub repo and push this project to it.
+1. Create a **private** GitHub repo and push this project to it.
 2. In the repo, open **Actions** and enable workflows if prompted.
 3. Trigger a test run: **Actions → collect-dreams → Run workflow** (defaults to a
    5-minute listen). Check the run log, then look for a `[skip ci] corpus: N
    dreams` commit.
-4. Adjust the `cron` in `collect.yml` to your local overnight (cron is UTC).
+4. Adjust the `cron` in `collect.yml` to your local peak (cron is UTC).
 
 Collection here is *sampled*, not continuous — which is exactly what Stage 1
 needs, since its job is to validate the material (dreams/hour, quality), not to
 capture every dream.
-
-Before making the repo public, confirm no secrets are in the tree **or history**
-(this project has none — the app uses only the public Bluesky jetstream, no
-auth).
 
 ### Later — a persistent worker (Stage 1 → continuous)
 
