@@ -12,9 +12,15 @@ on:
         description: "How long to listen, in ms (manual runs)"
         default: "300000"   # 5 minutes — good for a quick test
   schedule:
-    # 06:00 UTC daily. This is a PLACEHOLDER — change it to your local
-    # overnight. Cron here is always UTC. (e.g. US-Eastern 11pm = 03:00 UTC.)
-    - cron: "0 6 * * *"
+    # 11:00 UTC daily → the collector runs ~5.5h, to ~16:30 UTC. This rides the
+    # US morning "just woke up" dream-posting wave from coast to coast:
+    #   Eastern  7:00am–12:30pm  (full peak)
+    #   Central  6:00am–11:30am  (full morning)
+    #   Mountain 5:00am–10:30am  (full morning)
+    #   Pacific  4:00am– 9:30am  (early peak; clips the 9:30–11am tail)
+    # Centered on Eastern+Central (~¾ of US population). Cron is always UTC,
+    # so this drifts one hour earlier in local terms after US DST ends in Nov.
+    - cron: "0 11 * * *"
 
 # Never run two collectors at once (they'd fight over corpus.json on commit).
 concurrency:
