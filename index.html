@@ -29,7 +29,10 @@
 
 <div id="hud" role="status"></div>
 
-<!-- ambience.js must load before stream.js: it defines the shared `energy` symbol. -->
+<!-- Load order matters (classic scripts share one global scope):
+     filters.js defines DreamFilters; ambience.js defines the shared `energy`;
+     stream.js uses both. -->
+<script src="filters.js"></script>
 <script src="ambience.js"></script>
 <script src="stream.js"></script>
 </body>

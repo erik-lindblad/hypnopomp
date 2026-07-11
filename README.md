@@ -10,16 +10,26 @@ is complete.
 
 ## Files
 
-| File           | Role                                                                       |
-| -------------- | -------------------------------------------------------------------------- |
-| `index.html`   | Markup and font/stylesheet links only.                                     |
-| `style.css`    | All presentation.                                                          |
-| `ambience.js`  | The fullscreen canvas of drifting motes. Defines the shared `energy` symbol. |
-| `stream.js`    | Stage 1: firehose connection, filtering, dream display, corpus, HUD, export. |
+| File                          | Role                                                                          |
+| ----------------------------- | ----------------------------------------------------------------------------- |
+| `index.html`                  | Markup and font/stylesheet links only.                                        |
+| `style.css`                   | All presentation.                                                             |
+| `filters.js`                  | The dream-detection rules. Shared by the browser and the collector.           |
+| `ambience.js`                 | The fullscreen canvas of drifting motes. Defines the shared `energy` symbol.  |
+| `stream.js`                   | The browser instrument: firehose, dream display, localStorage corpus, HUD, export. |
+| `collector.js`                | The headless collector: same firehose + filters, writes the corpus to a file. |
+| `package.json`                | Node manifest for the collector (its one dependency is `ws`).                  |
+| `.github/workflows/collect.yml` | Scheduled job that runs the collector and commits the corpus (Stage 1 beta). |
 
-`ambience.js` **must** load before `stream.js`: both are classic (non-module)
-scripts sharing one global scope, and `stream.js` nudges the `energy` value that
-`ambience.js` declares and animates.
+In the browser, load order matters — `filters.js`, `ambience.js`, `stream.js`
+are classic (non-module) scripts sharing one global scope: `filters.js` defines
+`DreamFilters`, `ambience.js` defines the `energy` value that `stream.js` nudges,
+so both must load before `stream.js`.
+
+`filters.js` is the **single source of truth** for what counts as a dream. Both
+the browser (`stream.js`) and the headless `collector.js` call its `classify()`,
+so a post is judged identically no matter where it's caught — the corpus never
+depends on how it was collected.
 
 ## Running it
 
@@ -29,9 +39,67 @@ It's a static page — open `index.html` in a browser, or serve the folder:
 python3 -m http.server 8000   # then visit http://localhost:8000
 ```
 
-No build step, no backend (yet — see Stage 2). The corpus lives in
-`localStorage`; press **d** for a debug HUD, move the mouse to reveal the export
-tray.
+No build step. The corpus lives in `localStorage`; press **d** for a debug HUD,
+move the mouse to reveal the export tray.
+
+## Collecting without a browser
+
+The browser instrument only harvests while a tab is open and awake — no good for
+overnight collection. `collector.js` is the headless twin: it opens the same
+firehose, applies the same `filters.js` rules, and writes the corpus to a **file**
+(`data/corpus.json`) in the exact `[{ text, at }]` shape the browser exports.
+
+Run it locally:
+
+```
+npm install
+OUTPUT=data/corpus.json DURATION_MS=60000 npm run collect   # listen 60s, then exit
+```
+
+Environment variables:
+
+| Var            | Default            | Meaning                                          |
+| -------------- | ------------------ | ------------------------------------------------ |
+| `OUTPUT`       | `data/corpus.json` | Where to write the corpus.                       |
+| `DURATION_MS`  | `0`                | Run length in ms. **`0` means run forever.**     |
+| `FLUSH_MS`     | `30000`            | How often to save to disk.                       |
+| `MAX_CORPUS`   | `0`                | Cap on corpus length (`0` = unbounded).          |
+
+Repeated runs load the existing file first and accumulate (deduplicated by text),
+so collection survives across separate runs.
+
+## Deployment
+
+### Now — GitHub Actions (Stage 1 beta)
+
+`.github/workflows/collect.yml` runs the collector on a schedule (bounded ~5.5h
+windows, the most a hosted runner allows) and commits `data/corpus.json` back to
+the repo. It's free within GitHub's monthly minutes.
+
+**Keep this repo private.** Committing raw dreams to a *public* repo would
+publish them, violating the data contract below. A private repo keeps them
+unpublished.
+
+Setup:
+
+1. Create a **private** GitHub repo and push this project to it.
+2. In the repo, open **Actions** and enable workflows if prompted.
+3. Trigger a test run: **Actions → collect-dreams → Run workflow** (defaults to a
+   5-minute listen). Check the run log, then look for a `[skip ci] corpus: N
+   dreams` commit.
+4. Adjust the `cron` in `collect.yml` to your local overnight (cron is UTC).
+
+Collection here is *sampled*, not continuous — which is exactly what Stage 1
+needs, since its job is to validate the material (dreams/hour, quality), not to
+capture every dream.
+
+### Later — a persistent worker (Stage 1 → continuous)
+
+For gap-free 24/7 collection, run the **same `collector.js`** on an always-on
+host (Render background worker, Fly.io machine, etc.) with `DURATION_MS=0` so it
+runs forever, pointing `OUTPUT` at a persistent disk (or adapt the flush to push
+to a store). No code changes — only the deploy wrapper differs. This is a paid,
+always-on upgrade; the GitHub Actions path above is the free beta.
 
 ## The three-stage plan
 

@@ -3,24 +3,9 @@
 /* Stage 1 — The Instrument.
  * Streams the Bluesky Jetstream firehose, filters for spontaneous first-person
  * dream reports, displays matches one at a time, and collects a deduplicated
- * corpus in localStorage. Reads/writes `energy`, defined in ambience.js — which
- * must load first.
+ * corpus in localStorage. Reads/writes `energy`, defined in ambience.js, and
+ * uses `DreamFilters` from filters.js — both must load first.
  */
-
-/* ---------- filters ---------- */
-const INCLUDE = [
-  /\bi (just )?(dreamt|dreamed)\b/i,
-  /\bhad (a|the|this|such a|another) ?(weird|weirdest|strange|strangest|crazy|vivid|wild|awful|beautiful)? ?(dream|nightmare)\b/i,
-  /\b(dream|dreamt|dreamed|nightmare)s? last night\b/i,
-  /\blast night i (dreamt|dreamed|had a dream)\b/i,
-  /\bwoke up from (a|this|that) (dream|nightmare)\b/i,
-  /\brecurring (dream|nightmare)\b/i,
-  /\bin my dream\b/i,
-  /\bkept dreaming\b/i
-];
-const EXCLUDE = /dream job|dream come true|dream team|dream house|dream home|dream car|dream girl|dream guy|in your dreams|wildest dreams|living the dream|dream big|dream come|dream of mine|dream collab|dream cast|dream blunt/i;
-const HAS_LINK = /https?:\/\/|www\./i;
-const MIN_LEN = 40;
 
 /* ---------- state ---------- */
 const stats = {
@@ -60,11 +45,8 @@ function connect() {
     const text = r.text.trim();
     stats.lastRaw = text.slice(0, 120);
 
-    if (Array.isArray(r.langs) && r.langs.length && !r.langs.includes("en")) { stats.rej.lang++; return; }
-    if (text.length < MIN_LEN) { stats.rej.length++; return; }
-    if (HAS_LINK.test(text)) { stats.rej.link++; return; }
-    if (EXCLUDE.test(text)) { stats.rej.exclude++; return; }
-    if (!INCLUDE.some(rx => rx.test(text))) { stats.rej.noinclude++; return; }
+    const reason = DreamFilters.classify(text, r.langs);
+    if (reason) { stats.rej[reason]++; return; }
 
     acceptDream(text);
   };

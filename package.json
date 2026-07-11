@@ -1,0 +1,15 @@
+{
+  "name": "the-dreaming-collector",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Headless Stage 1 collector for The Dreaming — harvests dream reports from the Bluesky Jetstream firehose into a JSON corpus.",
+  "scripts": {
+    "collect": "node collector.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

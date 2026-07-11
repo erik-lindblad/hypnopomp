@@ -1,0 +1,59 @@
+name: collect-dreams
+
+# Stage 1 (beta) deployment: a scheduled GitHub Actions job runs the headless
+# collector for a bounded window, then commits the accumulated corpus back to
+# this (PRIVATE) repo. Keep the repo private so raw dreams are never published,
+# per the data contract in the README.
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration_ms:
+        description: "How long to listen, in ms (manual runs)"
+        default: "300000"   # 5 minutes — good for a quick test
+  schedule:
+    # 06:00 UTC daily. This is a PLACEHOLDER — change it to your local
+    # overnight. Cron here is always UTC. (e.g. US-Eastern 11pm = 03:00 UTC.)
+    - cron: "0 6 * * *"
+
+# Never run two collectors at once (they'd fight over corpus.json on commit).
+concurrency:
+  group: collect-dreams
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # needed to commit the corpus back
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    # Hosted-runner hard cap is 6h; stay under it and leave room to commit.
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - run: npm install
+
+      - name: Collect
+        env:
+          OUTPUT: data/corpus.json
+          # Manual runs use the input; scheduled runs listen ~5.5h (19,800,000 ms).
+          DURATION_MS: ${{ github.event.inputs.duration_ms || '19800000' }}
+        run: node collector.js
+
+      - name: Commit corpus
+        run: |
+          git config user.name "dreaming-collector"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/corpus.json
+          if git diff --cached --quiet; then
+            echo "no new dreams this run"
+          else
+            COUNT=$(node -e "console.log(require('./data/corpus.json').length)")
+            git commit -m "[skip ci] corpus: ${COUNT} dreams"
+            git push
+          fi
