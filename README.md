@@ -114,9 +114,17 @@ always-on upgrade; the GitHub Actions path above is the free beta.
 ## The public display
 
 `public/index.html` renders the collected corpus as a twistori-inspired drift —
-anonymous dream fragments rising slowly through the dark, cycling endlessly
-through a shuffled `corpus.json`. It's a self-contained static page: it fetches
-`corpus.json` (served alongside it) and needs no backend.
+anonymous dream fragments rising slowly through the dark. It's a self-contained
+static page: it fetches `corpus.json` (served alongside it) and needs no backend.
+
+**It shows only the latest batch.** The page loads the whole corpus but drifts
+only the most recent collection run — "what the internet dreamt last night" —
+so it reads as the collective unconscious in (daily) real time rather than an
+ever-growing pile. Batches are separated client-side by a gap in the `at`
+timestamps (`SESSION_GAP`, 12h); the archive keeps accumulating unseen, and the
+footer shows the batch size, the all-time total, and how long ago it was
+gathered. Note `at` is *collection* time (a close proxy for post time, since
+posts are caught live), not the original Bluesky post timestamp.
 
 **Deploy as a Render Static Site** (free, always-on, CDN-served — unlike the
 paid always-on worker above):

@@ -93,8 +93,8 @@
   <span>what the internet dreamt</span>
 </header>
 <footer>
-  <span><span id="count">—</span> dreams collected</span>
-  <span>anonymous · unattributed</span>
+  <span><span id="count">—</span> dreams · <span id="total">—</span> collected</span>
+  <span>gathered <span id="ago">—</span> · anonymous</span>
 </footer>
 
 <div id="hush">the dreaming is still listening…</div>
@@ -179,12 +179,39 @@ function start() {
   else schedule();                            // gap-based upward drift
 }
 
+// Human "3 hours ago" for the recency marker.
+function relAgo(ts) {
+  const s = Math.max(0, (Date.now() - ts) / 1000);
+  if (s < 90) return "moments ago";
+  const m = Math.round(s / 60); if (m < 60) return m + (m === 1 ? " minute ago" : " minutes ago");
+  const h = Math.round(m / 60); if (h < 24) return h + (h === 1 ? " hour ago" : " hours ago");
+  const d = Math.round(h / 24); return d <= 1 ? "yesterday" : d + " days ago";
+}
+
+// Split the corpus into the latest collection batch vs everything older. A gap
+// larger than SESSION_GAP between consecutive timestamps marks a new night's run;
+// only the most recent batch is shown — the archive keeps accumulating unseen.
+const SESSION_GAP = 12 * 3600 * 1000;   // 12h cleanly separates nightly runs
+function partition(data) {
+  const rows = (Array.isArray(data) ? data : [])
+    .map(d => ({ text: clean(d && d.text ? d.text : ""), t: Date.parse(d && d.at) }))
+    .filter(d => d.text && !isNaN(d.t))
+    .sort((a, b) => a.t - b.t);
+  if (!rows.length) return { fresh: [], total: 0, newest: null };
+  let startIdx = 0;
+  for (let i = rows.length - 1; i > 0; i--) {
+    if (rows[i].t - rows[i - 1].t > SESSION_GAP) { startIdx = i; break; }
+  }
+  return { fresh: rows.slice(startIdx).map(r => r.text), total: rows.length, newest: rows[rows.length - 1].t };
+}
+
 fetch("corpus.json", { cache: "no-store" })
   .then(r => r.ok ? r.json() : Promise.reject(r.status))
   .then(data => {
-    dreams = (Array.isArray(data) ? data : [])
-      .map(d => clean(d && d.text ? d.text : ""))
-      .filter(t => t.length > 0);
+    const batch = partition(data);
+    dreams = batch.fresh;                               // drift shows only the latest batch
+    document.getElementById("total").textContent = batch.total.toLocaleString();
+    document.getElementById("ago").textContent = batch.newest ? relAgo(batch.newest) : "—";
     start();
   })
   .catch(() => { hush.classList.add("on"); });
