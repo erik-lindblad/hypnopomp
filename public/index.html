@@ -134,7 +134,7 @@ function render(text) {
 
 let dreams = [];
 let bag = [];          // shuffled queue, refilled when drained
-let spawnTimer = null;
+let lastEl = null;     // the most recently spawned fragment
 
 function reshuffle() {
   bag = dreams.slice();
@@ -151,10 +151,23 @@ function draw() {
 function spawn() {
   if (!dreams.length) return;
   const el = render(draw());
-  const life = LIFE_MS * (0.88 + Math.random() * 0.3);   // gentle variety
-  el.style.animation = `rise ${life}ms linear forwards`;
+  // Every fragment shares one speed, so a gap set at spawn is preserved the
+  // whole way up — nothing catches up to the dream ahead of it.
+  el.style.animation = `rise ${LIFE_MS}ms linear forwards`;
   el.addEventListener("animationend", () => el.remove());
   stream.appendChild(el);
+  lastEl = el;
+}
+
+// Release the next dream only once the previous one has risen clear of the
+// lower band. This adapts to each dream's height — long dreams simply wait
+// longer — so fragments never overlap.
+const GAP = 0.82;
+function schedule() {
+  const clear = !lastEl || !lastEl.isConnected ||
+                lastEl.getBoundingClientRect().bottom < innerHeight * GAP;
+  if (clear) spawn();
+  setTimeout(schedule, 450);
 }
 
 function start() {
@@ -162,8 +175,8 @@ function start() {
   if (!dreams.length) { hush.classList.add("on"); return; }
   reshuffle();
   spawn();
-  setTimeout(spawn, SPAWN_MS * 0.5);   // seed a second so the field isn't bare
-  spawnTimer = setInterval(spawn, SPAWN_MS);
+  if (REDUCED) setInterval(spawn, SPAWN_MS);  // one at a time, centered crossfade
+  else schedule();                            // gap-based upward drift
 }
 
 fetch("corpus.json", { cache: "no-store" })
