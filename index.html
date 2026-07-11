@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Dreaming</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+
+<header>
+  <div class="status">
+    <div class="row"><span id="dot"></span><span id="conn">connecting · jetstream</span></div>
+    <div class="row"><span>dreams heard tonight: <span id="count">0</span></span></div>
+    <div class="row dim"><span>collected all time: <span id="total">0</span></span></div>
+  </div>
+  <h1>The Dreaming</h1>
+</header>
+
+<div id="dream"><p id="dreamText"></p></div>
+
+<div id="tray">
+  <span class="dim">press d for debug · move mouse to wake · corpus saved locally</span>
+  <button id="export">Export corpus (JSON)</button>
+</div>
+
+<div id="hud" role="status"></div>
+
+<!-- ambience.js must load before stream.js: it defines the shared `energy` symbol. -->
+<script src="ambience.js"></script>
+<script src="stream.js"></script>
+</body>
+</html>

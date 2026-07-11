@@ -1,0 +1,66 @@
+:root {
+  --ink: #070810;
+  --mist: #8b93ad;
+  --moon: #d8dcea;
+  --ember: #b7a98a;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; background: var(--ink); }
+body { font-family: "IBM Plex Mono", monospace; color: var(--mist); }
+
+#sky { position: fixed; inset: 0; display: block; }
+
+header {
+  position: fixed; top: 0; left: 0; right: 0;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 28px 32px; pointer-events: none;
+  font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+}
+.status { display: flex; flex-direction: column; gap: 6px; }
+.row { display: flex; align-items: center; gap: 8px; }
+#dot { width: 7px; height: 7px; border-radius: 50%; background: #4a5; transition: background 0.5s; }
+#dot.down { background: #a54; }
+.dim { color: #4a4f63; }
+h1 { font-size: 11px; font-weight: 400; letter-spacing: 0.3em; color: #575d75; }
+
+#dream {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  padding: 12vh 14vw; text-align: center; pointer-events: none;
+}
+#dream p {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(24px, 3.4vw, 44px); font-weight: 400; line-height: 1.5;
+  color: var(--moon); opacity: 0; transition: opacity 3s ease;
+  text-wrap: balance;
+}
+#dream p.visible { opacity: 1; }
+#dream p em { font-style: italic; color: var(--ember); }
+
+#tray {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  display: flex; justify-content: space-between; align-items: flex-end;
+  padding: 24px 32px; font-size: 11px; letter-spacing: 0.14em;
+  opacity: 0; transition: opacity 0.6s; pointer-events: none;
+}
+body.awake #tray { opacity: 1; pointer-events: auto; }
+#tray button {
+  background: none; border: 1px solid #2a2f42; color: var(--mist);
+  font: inherit; letter-spacing: inherit; text-transform: uppercase;
+  padding: 9px 16px; cursor: pointer; border-radius: 2px;
+}
+#tray button:hover { border-color: #4a5069; color: var(--moon); }
+#tray button:focus-visible { outline: 1px solid var(--moon); outline-offset: 2px; }
+
+#hud {
+  position: fixed; right: 24px; bottom: 24px; width: min(440px, 90vw);
+  background: rgba(10, 12, 22, 0.92); border: 1px solid #232840;
+  padding: 18px 20px; font-size: 12px; line-height: 1.75;
+  display: none; white-space: pre-wrap; word-break: break-word;
+  max-height: 60vh; overflow-y: auto; border-radius: 3px;
+}
+#hud.open { display: block; }
+#hud b { color: var(--moon); font-weight: 400; }
+
+@media (prefers-reduced-motion: reduce) {
+  #dream p { transition: opacity 0.5s; }
+}
