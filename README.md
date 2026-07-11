@@ -75,15 +75,18 @@ so collection survives across separate runs.
 
 `.github/workflows/collect.yml` runs the collector on a schedule (bounded ~5.5h
 windows, the most a hosted runner allows) and commits `data/corpus.json` back to
-the repo. It's free within GitHub's monthly minutes.
+the repo.
 
-**Keep this repo private.** Committing raw dreams to a *public* repo would
-publish them, violating the data contract below. A private repo keeps them
-unpublished.
+**This repo is public — deliberately.** A private repo gets only ~2,000 Actions
+minutes/month, and a nightly 5.5h run burns that in ~6 nights. A **public** repo
+gets *unlimited* Actions minutes, so collection can run nightly, year-round, for
+free. This is consistent with the data-contract amendment below: the corpus is
+anonymized (only `{ text, at }` — no handle, DID, or link), so a public repo
+exposes nothing that isn't already public and unattributable.
 
 Setup:
 
-1. Create a **private** GitHub repo and push this project to it.
+1. Create a **public** GitHub repo and push this project to it.
 2. In the repo, open **Actions** and enable workflows if prompted.
 3. Trigger a test run: **Actions → collect-dreams → Run workflow** (defaults to a
    5-minute listen). Check the run log, then look for a `[skip ci] corpus: N
@@ -93,6 +96,10 @@ Setup:
 Collection here is *sampled*, not continuous — which is exactly what Stage 1
 needs, since its job is to validate the material (dreams/hour, quality), not to
 capture every dream.
+
+Before making the repo public, confirm no secrets are in the tree **or history**
+(this project has none — the app uses only the public Bluesky jetstream, no
+auth).
 
 ### Later — a persistent worker (Stage 1 → continuous)
 
